@@ -1,0 +1,13 @@
+{
+  "Author": "pROEgrammer",
+  "Name": "PF Info",
+  "Punchline": "Shows information about the current Party Finder.",
+  "Description": "/pfinfo to show the current Party finder description. /pfinfoconfig to open the configuration window.",
+  "InternalName": "pfInfo",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "partyfinder",
+    "party finder",
+    "pf"
+  ]
+}
