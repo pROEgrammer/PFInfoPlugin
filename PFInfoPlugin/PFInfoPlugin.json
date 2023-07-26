@@ -1,13 +1,16 @@
 {
-  "Author": "pROEgrammer",
-  "Name": "PF Info",
-  "Punchline": "Shows information about the current Party Finder.",
-  "Description": "/pfinfo to show the current Party finder description. /pfinfoconfig to open the configuration window.",
-  "InternalName": "pfInfo",
-  "ApplicableVersion": "any",
-  "Tags": [
-    "partyfinder",
-    "party finder",
-    "pf"
-  ]
+    "Author": "pROEgrammer",
+    "Name": "PF Info",
+    "Punchline": "Shows information about the current Party Finder.",
+    "Description": "/pfinfo to show the current Party finder description. /pfinfoconfig to open the configuration window.",
+    "InternalName": "pfInfo",
+    "ApplicableVersion": "any",
+    "Tags": [
+        "partyfinder",
+        "party finder",
+        "pf"
+    ],
+    "DownloadLinkInstall": "https://github.com/pROEgrammer/PFInfoPlugin/releases/download/0.0.1/PFInfoPlugin-0.0.1.zip",
+    "DownloadLinkTesting": "https://github.com/pROEgrammer/PFInfoPlugin/releases/download/0.0.1/PFInfoPlugin-0.0.1.zip",
+    "DownloadLinkUpdate": "https://github.com/pROEgrammer/PFInfoPlugin/releases/download/0.0.1/PFInfoPlugin-0.0.1.zip"
 }
