@@ -5,6 +5,8 @@
         "Punchline": "Shows information about the current Party Finder.",
         "Description": "/pfinfo to show the current Party finder description. /pfinfoconfig to open the configuration window.",
         "InternalName": "pfInfo",
+        "AssemblyVersion": "0.0.1",
+        "TestingAssemblyVersion": "0.0.1",
         "ApplicableVersion": "any",
         "Tags": [
             "partyfinder",
