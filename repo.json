@@ -13,6 +13,7 @@
             "party finder",
             "pf"
         ],
+        "IconUrl": "https://raw.githubusercontent.com/pROEgrammer/PFInfoPlugin/main/pficon.png",
         "DownloadLinkInstall": "https://github.com/pROEgrammer/PFInfoPlugin/releases/download/0.0.0.1/PFInfoPlugin-0.0.0.1.zip",
         "DownloadLinkTesting": "https://github.com/pROEgrammer/PFInfoPlugin/releases/download/0.0.0.1/PFInfoPlugin-0.0.0.1.zip",
         "DownloadLinkUpdate": "https://github.com/pROEgrammer/PFInfoPlugin/releases/download/0.0.0.1/PFInfoPlugin-0.0.0.1.zip"
