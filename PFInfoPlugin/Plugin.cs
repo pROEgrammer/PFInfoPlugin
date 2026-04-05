@@ -12,7 +12,9 @@ using Dalamud.Plugin.Services;
 using SamplePlugin.Windows;
 using Serilog;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SamplePlugin
 {
@@ -26,6 +28,8 @@ namespace SamplePlugin
         [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
         [PluginService] internal static IPluginLog PluginLog { get; private set; } = null!;
         [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+        [PluginService] internal static IPartyList PartyList { get; private set; } = null!;
+
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("Party Finder Info");
 
@@ -36,13 +40,15 @@ namespace SamplePlugin
         internal static IPartyFinderGui PartyFinderGui { get; set; } = null!;
         [PluginService]
         internal static IChatGui ChatGui { get; set; } = null!;
-
-        private List<IPartyFinderListing> pfListings { get; set; } = new();
-
-        public IPartyFinderListing pfListing = null;
         [PluginService]
         internal static IPlayerState playerState { get; set; } = null!;
         public string playerName = "";
+
+        //private List<IPartyFinderListing> pfListings { get; set; } = new();
+
+        public IPartyFinderListing pfListing { get; set; } = null;
+
+        private ConcurrentDictionary<int, List<IPartyFinderListing>> pfListings { get; set; } = new();
 
         private Boolean isDescriptionIncoming = false;
         private Boolean isRecruiting = false;
@@ -73,7 +79,7 @@ namespace SamplePlugin
             // Hook onto PF event
             try
             {
-                PartyFinderGui.ReceiveListing += this.OnListing;
+                //PartyFinderGui.ReceiveListing += this.OnListing;
             }
             catch (Exception ex)
             {
@@ -92,21 +98,28 @@ namespace SamplePlugin
 
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
 
-            PluginLog.Debug($"PlayerState: {playerState}");
+            //PluginLog.Debug($"PlayerState: {playerState}");
 
             if (playerState.IsLoaded)
             {
-                PluginLog.Debug($"Loaded PlayerState: {playerState.CharacterName}");
+                //PluginLog.Debug($"Loaded PlayerState: {playerState.CharacterName}");
                 playerName = playerState.CharacterName;
             }
 
-            PluginLog.Information($"===A cool log message from {PluginInterface.Manifest.Name}=== (means it's working)");
+            //PluginLog.Information($"===A cool log message from {PluginInterface.Manifest.Name}===");
         }
 
         private void OnListing(IPartyFinderListing listing, IPartyFinderListingEventArgs args)
         {
-            PluginLog.Information($"OnListing description: {listing.Name} - {listing.Description}");
-            this.pfListings.Add(listing);
+            PluginLog.Information($"OnListing description: [{args.BatchNumber}] {listing.Name} - {listing.Description}");
+
+            if (!this.pfListings.ContainsKey(args.BatchNumber))
+            {
+                this.pfListings[args.BatchNumber] = [];
+            }
+
+            this.pfListings[args.BatchNumber].Add(listing);
+            //this.pfListings.Add(listing);
         }
 
         private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
@@ -116,54 +129,79 @@ namespace SamplePlugin
                 PluginLog.Debug($"Chat Type: " + type);
                 PluginLog.Debug($"SysMsg: " + XivChatType.SystemMessage);
 
+                var partyLeaderIndex = PartyList.PartyLeaderIndex;
+                var partyFinderLeader = PartyList[((int)partyLeaderIndex)];
+
+
+                if (PartyList != null && PartyList.Count > 0)
+                {
+                    PluginLog.Debug($"PartyList: {PartyList.Count}");
+                    PluginLog.Debug($"PartyLeaderIndex: " + partyLeaderIndex);
+                    PluginLog.Debug($"PartyLeader: " + partyFinderLeader);
+                }
+
                 if (XivChatType.SystemMessage.Equals(type))
                 {
-                    PluginLog.Debug("Comment coming up!");
-                    var pfComment = message.TextValue;
-                    PluginLog.Information($"PF INFO COMMENT: " + pfComment);
+                    var pfComment = "";
+                    if (this.isDescriptionIncoming)
+                    {
+                        PluginLog.Debug("PF comment coming up!");
+                        PluginLog.Information($"PF COMMENT: " + message.TextValue);
+                        pfComment = message.TextValue;
+                    }
+                    else
+                    {
+                        PluginLog.Debug("SystemMessage coming up!");
+                        PluginLog.Information($"SystemMessage COMMENT: " + message.TextValue);
+                    }
                     this.isDescriptionIncoming = false;
 
-                    PluginLog.Debug("Iterating through listings");
-
-                    foreach (var listing in this.pfListings)
-                    {
-                        PluginLog.Debug($"Listing name: " + listing.Name + " - " + listing.Description);
-
-                        if (
-                            (
-                                pfComment.Contains("Party recruitment commenced") ||
-                                pfComment.Contains("Cross-world party formed.")
-                            )
-                            && listing.Name.ToString().Equals(playerName))
-                        {
-                            PluginLog.Debug("DING DING DING");
-
-                            PluginLog.Debug("Matched - recruiting");
-
-                            this.pfListing = listing;
-                            this.pfListings = new();
-                            break;
-                        } else 
-
-                        if (MessageMatchesListing(listing, message))
-                        {
-                            PluginLog.Debug("DING DING DING");
-
-                            PluginLog.Debug("Matched");
-
-                            this.pfListing = listing;
-                            this.pfListings = new();
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    PluginLog.Debug($"Chat Message: " + message);
-
                     if (message.TextValue.Contains("■Comment")) // TODO: Localization?
-                    {
                         this.isDescriptionIncoming = true;
+
+
+                    if (message.TextValue.Contains("Party recruitment commenced"))
+                    {
+                        this.isRecruiting = true;
+                    }
+
+                    if (pfComment != null && this.pfListings.Count > 0)
+                    {
+
+                        PluginLog.Debug("Iterating through listings");
+                        var currentKey = pfListings.Keys.Max();
+                        foreach (var listing in this.pfListings[currentKey])
+                        {
+                            PluginLog.Debug($"Listing name: " + listing.Name + " - " + listing.Description);
+
+                            if (this.isRecruiting
+                                && listing.Name.ToString().Equals(playerName))
+                            {
+                                PluginLog.Debug("DING DING DING");
+                                PluginLog.Debug("Matched - recruiting");
+
+                                this.pfListing = listing;
+                                this.pfListings = new();
+                                break;
+                            }
+                            else
+                            {
+                                //if (message.TextValue.Contains("■Comment")) // TODO: Localization?
+
+                                if (MessageMatchesListing(listing, message) ||
+                                    (partyFinderLeader != null && listing.Name.Equals(partyFinderLeader.Name)))
+                                {
+                                    PluginLog.Debug("DING DING DING");
+                                    PluginLog.Debug("Matched");
+
+                                    this.pfListing = listing;
+                                    this.pfListings = new();
+                                    break;
+                                }
+                                if (this.pfListing != null) break;
+                            }
+                            if (this.pfListing != null) break;
+                        }
                     }
                 }
             }
@@ -172,6 +210,7 @@ namespace SamplePlugin
                 PluginLog.Error($"OnChatMessage Error: {ex}");
             }
         }
+
 
         private Boolean MessageMatchesListing(IPartyFinderListing listing, SeString message)
         {
@@ -201,7 +240,7 @@ namespace SamplePlugin
             CommandManager.RemoveHandler(CommandNamePFInfo);
             CommandManager.RemoveHandler(CommandNamePFInfoConfig);
 
-            PartyFinderGui.ReceiveListing -= this.OnListing;
+            //PartyFinderGui.ReceiveListing -= this.OnListing;
 
             ChatGui.ChatMessage -= OnChatMessage;
         }
