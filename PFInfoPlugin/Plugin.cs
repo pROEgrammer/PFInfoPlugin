@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.Game.Gui.PartyFinder;
@@ -24,6 +25,7 @@ namespace SamplePlugin
         [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
         [PluginService] internal static IPluginLog PluginLog { get; private set; } = null!;
+        [PluginService] internal static IClientState ClientState { get; private set; } = null!;
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("Party Finder Info");
 
@@ -38,15 +40,14 @@ namespace SamplePlugin
         private List<IPartyFinderListing> pfListings { get; set; } = new();
 
         public IPartyFinderListing pfListing = null;
-        private Boolean isDescriptionIncoming = false;
+        [PluginService]
+        internal static IPlayerState playerState { get; set; } = null!;
+        public string playerName = "";
 
-        public Plugin(
-/*          
-            [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] CommandManager commandManager,
-            [RequiredVersion("1.0")] ChatGui chatGui
-*/
-            )
+        private Boolean isDescriptionIncoming = false;
+        private Boolean isRecruiting = false;
+
+        public Plugin()
         {
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             //this.Configuration.Initialize(this.PluginInterface);
@@ -91,11 +92,20 @@ namespace SamplePlugin
 
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
 
-            Log.Information($"===A cool log message from {PluginInterface.Manifest.Name}=== (means it's working)");
+            PluginLog.Debug($"PlayerState: {playerState}");
+
+            if (playerState.IsLoaded)
+            {
+                PluginLog.Debug($"Loaded PlayerState: {playerState.CharacterName}");
+                playerName = playerState.CharacterName;
+            }
+
+            PluginLog.Information($"===A cool log message from {PluginInterface.Manifest.Name}=== (means it's working)");
         }
 
         private void OnListing(IPartyFinderListing listing, IPartyFinderListingEventArgs args)
         {
+            PluginLog.Information($"OnListing description: {listing.Name} - {listing.Description}");
             this.pfListings.Add(listing);
         }
 
@@ -106,20 +116,39 @@ namespace SamplePlugin
                 PluginLog.Debug($"Chat Type: " + type);
                 PluginLog.Debug($"SysMsg: " + XivChatType.SystemMessage);
 
-                if (this.isDescriptionIncoming && XivChatType.SystemMessage.Equals(type))
+                if (XivChatType.SystemMessage.Equals(type))
                 {
                     PluginLog.Debug("Comment coming up!");
                     var pfComment = message.TextValue;
                     PluginLog.Information($"PF INFO COMMENT: " + pfComment);
                     this.isDescriptionIncoming = false;
+
                     PluginLog.Debug("Iterating through listings");
 
                     foreach (var listing in this.pfListings)
                     {
                         PluginLog.Debug($"Listing name: " + listing.Name + " - " + listing.Description);
 
+                        if (
+                            (
+                                pfComment.Contains("Party recruitment commenced") ||
+                                pfComment.Contains("Cross-world party formed.")
+                            )
+                            && listing.Name.ToString().Equals(playerName))
+                        {
+                            PluginLog.Debug("DING DING DING");
+
+                            PluginLog.Debug("Matched - recruiting");
+
+                            this.pfListing = listing;
+                            this.pfListings = new();
+                            break;
+                        } else 
+
                         if (MessageMatchesListing(listing, message))
                         {
+                            PluginLog.Debug("DING DING DING");
+
                             PluginLog.Debug("Matched");
 
                             this.pfListing = listing;
@@ -146,10 +175,14 @@ namespace SamplePlugin
 
         private Boolean MessageMatchesListing(IPartyFinderListing listing, SeString message)
         {
+            //PluginLog.Information($"MessageMatchesListing description: {listing.Description}");
+            //PluginLog.Information($"MessageMatchesListing message: {message}");
             if (message.TextValue.Equals("None"))
             {
+                //PluginLog.Information($"MessageMatchesListing message is empty.");
                 return listing.Description.TextValue.Equals("");
             }
+            PluginLog.Information($"MessageMatchesListing does message match description? {listing.Description.TextValue.Equals(message.TextValue)}");
             return listing.Description.TextValue.Equals(message.TextValue);
         }
 
