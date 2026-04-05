@@ -32,6 +32,7 @@ namespace SamplePlugin
 
         [PluginService]
         internal static IPartyFinderGui PartyFinderGui { get; set; } = null!;
+        [PluginService]
         internal static IChatGui ChatGui { get; set; } = null!;
 
         private List<IPartyFinderListing> pfListings { get; set; } = new();
@@ -81,8 +82,7 @@ namespace SamplePlugin
             // Hook onto chat message
             try
             {
-                // TODO: figure out null issue
-                //ChatGui.ChatMessage += OnChatMessage;
+                ChatGui.ChatMessage += OnChatMessage;
             }
             catch (Exception ex)
             {
@@ -140,7 +140,7 @@ namespace SamplePlugin
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error: {ex}");
+                PluginLog.Error($"OnChatMessage Error: {ex}");
             }
         }
 
@@ -170,8 +170,7 @@ namespace SamplePlugin
 
             PartyFinderGui.ReceiveListing -= this.OnListing;
 
-            // TODO: figure out null issue
-            //ChatGui.ChatMessage -= OnChatMessage;
+            ChatGui.ChatMessage -= OnChatMessage;
         }
 
         private void OnCommand(string command, string args)
