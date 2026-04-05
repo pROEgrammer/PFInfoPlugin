@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.Game.Gui.PartyFinder;
@@ -8,9 +6,12 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
-using Dalamud.Logging;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using SamplePlugin.Windows;
+using Serilog;
+using System;
+using System.Collections.Generic;
 
 namespace SamplePlugin
 {
@@ -20,8 +21,9 @@ namespace SamplePlugin
         private const string CommandNamePFInfo = "/pfinfo";
         private const string CommandNamePFInfoConfig = "/pfinfoconfig";
 
-        private DalamudPluginInterface PluginInterface { get; init; }
-        private CommandManager CommandManager { get; init; }
+        [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
+        [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
+        [PluginService] internal static IPluginLog PluginLog { get; private set; } = null!;
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("Party Finder Info");
 
@@ -29,24 +31,24 @@ namespace SamplePlugin
         private MainWindow MainWindow { get; init; }
 
         [PluginService]
-        internal static PartyFinderGui PartyFinderGui { get; set; } = null!;
-        internal static ChatGui ChatGui { get; set; } = null!;
+        internal static IPartyFinderGui PartyFinderGui { get; set; } = null!;
+        internal static IChatGui ChatGui { get; set; } = null!;
 
-        private List<PartyFinderListing> pfListings { get; set; } = new();
+        private List<IPartyFinderListing> pfListings { get; set; } = new();
 
-        public PartyFinderListing pfListing = null;
+        public IPartyFinderListing pfListing = null;
         private Boolean isDescriptionIncoming = false;
 
         public Plugin(
+/*          
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
-            [RequiredVersion("1.0")] ChatGui chatGui)
+            [RequiredVersion("1.0")] ChatGui chatGui
+*/
+            )
         {
-            this.PluginInterface = pluginInterface;
-            this.CommandManager = commandManager;
-
-            this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            this.Configuration.Initialize(this.PluginInterface);
+            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            //this.Configuration.Initialize(this.PluginInterface);
 
             ConfigWindow = new ConfigWindow(this);
             MainWindow = new MainWindow(this);
@@ -54,17 +56,17 @@ namespace SamplePlugin
             WindowSystem.AddWindow(ConfigWindow);
             WindowSystem.AddWindow(MainWindow);
 
-            this.CommandManager.AddHandler(CommandNamePFInfo, new CommandInfo(OnCommand)
+            CommandManager.AddHandler(CommandNamePFInfo, new CommandInfo(OnCommand)
             {
                 HelpMessage = "Displays the PF info window."
             });
-            this.CommandManager.AddHandler(CommandNamePFInfoConfig, new CommandInfo(OnCommandConfig)
+            CommandManager.AddHandler(CommandNamePFInfoConfig, new CommandInfo(OnCommandConfig)
             {
                 HelpMessage = "Displays the PF info configuration window."
             });
 
-            this.PluginInterface.UiBuilder.Draw += DrawUI;
-            this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            PluginInterface.UiBuilder.Draw += DrawUI;
+            PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             // Hook onto PF event
             try
@@ -73,47 +75,52 @@ namespace SamplePlugin
             }
             catch (Exception ex)
             {
-                PluginLog.LogError($"PartyFinderGui Error: {ex}");
+                PluginLog.Error($"PartyFinderGui Error: {ex}");
             }
 
             // Hook onto chat message
             try
             {
-                chatGui.ChatMessage += this.OnChatMessage;
+                // TODO: figure out null issue
+                //ChatGui.ChatMessage += OnChatMessage;
             }
             catch (Exception ex)
             {
-                PluginLog.LogError($"ChatGui Error: {ex}");
+                PluginLog.Error($"ChatGui Error: {ex}");
             }
+
+            PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
+
+            Log.Information($"===A cool log message from {PluginInterface.Manifest.Name}=== (means it's working)");
         }
 
-        private void OnListing(PartyFinderListing listing, PartyFinderListingEventArgs args)
+        private void OnListing(IPartyFinderListing listing, IPartyFinderListingEventArgs args)
         {
             this.pfListings.Add(listing);
         }
 
-        private void OnChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
+        private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
         {
             try
             {
-                PluginLog.LogDebug($"Chat Type: " + type);
-                PluginLog.LogDebug($"SysMsg: " + XivChatType.SystemMessage);
+                PluginLog.Debug($"Chat Type: " + type);
+                PluginLog.Debug($"SysMsg: " + XivChatType.SystemMessage);
 
                 if (this.isDescriptionIncoming && XivChatType.SystemMessage.Equals(type))
                 {
-                    PluginLog.LogDebug("Comment coming up!");
+                    PluginLog.Debug("Comment coming up!");
                     var pfComment = message.TextValue;
-                    PluginLog.LogInformation($"PF INFO COMMENT: " + pfComment);
+                    PluginLog.Information($"PF INFO COMMENT: " + pfComment);
                     this.isDescriptionIncoming = false;
-                    PluginLog.LogDebug("Iterating through listings");
+                    PluginLog.Debug("Iterating through listings");
 
                     foreach (var listing in this.pfListings)
                     {
-                        PluginLog.LogDebug($"Listing name: " + listing.Name + " - " + listing.Description);
+                        PluginLog.Debug($"Listing name: " + listing.Name + " - " + listing.Description);
 
                         if (MessageMatchesListing(listing, message))
                         {
-                            PluginLog.LogDebug("Matched");
+                            PluginLog.Debug("Matched");
 
                             this.pfListing = listing;
                             this.pfListings = new();
@@ -123,7 +130,7 @@ namespace SamplePlugin
                 }
                 else
                 {
-                    PluginLog.LogDebug($"Chat Message: " + message);
+                    PluginLog.Debug($"Chat Message: " + message);
 
                     if (message.TextValue.Contains("■Comment")) // TODO: Localization?
                     {
@@ -133,11 +140,11 @@ namespace SamplePlugin
             }
             catch (Exception ex)
             {
-                PluginLog.LogError($"Error: {ex}");
+                PluginLog.Error($"Error: {ex}");
             }
         }
 
-        private Boolean MessageMatchesListing(PartyFinderListing listing, SeString message)
+        private Boolean MessageMatchesListing(IPartyFinderListing listing, SeString message)
         {
             if (message.TextValue.Equals("None"))
             {
@@ -148,16 +155,23 @@ namespace SamplePlugin
 
         public void Dispose()
         {
-            this.WindowSystem.RemoveAllWindows();
+
+            // Unregister all actions to not leak anything during disposal of plugin
+            PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
+            PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
+
+            WindowSystem.RemoveAllWindows();
 
             ConfigWindow.Dispose();
             MainWindow.Dispose();
 
-            this.CommandManager.RemoveHandler(CommandNamePFInfo);
-            this.CommandManager.RemoveHandler(CommandNamePFInfoConfig);
+            CommandManager.RemoveHandler(CommandNamePFInfo);
+            CommandManager.RemoveHandler(CommandNamePFInfoConfig);
 
             PartyFinderGui.ReceiveListing -= this.OnListing;
-            ChatGui.ChatMessage -= this.OnChatMessage;
+
+            // TODO: figure out null issue
+            //ChatGui.ChatMessage -= OnChatMessage;
         }
 
         private void OnCommand(string command, string args)
@@ -181,5 +195,7 @@ namespace SamplePlugin
         {
             ConfigWindow.IsOpen = true;
         }
+
+        public void ToggleMainUi() => MainWindow.Toggle();
     }
 }

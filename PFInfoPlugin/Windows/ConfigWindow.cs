@@ -1,28 +1,26 @@
 using System;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace SamplePlugin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    private Configuration Configuration;
+    private readonly Configuration configuration;
 
-    public ConfigWindow(Plugin plugin) : base(
-        "Party Finder Info - Configuration",
-        ImGuiWindowFlags.NoCollapse |
-        ImGuiWindowFlags.NoScrollbar |
-        ImGuiWindowFlags.NoScrollWithMouse)
+    public ConfigWindow(Plugin plugin) : base("Party Finder Info - Configuration")
     {
-        this.SizeConstraints = new WindowSizeConstraints
+        Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
+        
+        SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(200, 100),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
-        this.SizeCondition = ImGuiCond.Always;
+        SizeCondition = ImGuiCond.Always;
 
-        this.Configuration = plugin.Configuration;
+        configuration = plugin.Configuration;
     }
 
     public void Dispose() { }
@@ -32,26 +30,26 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Text("Show:");
 
         // can't ref a property, so use a local copy
-        var showNameValue = this.Configuration.showName;
+        var showNameValue = configuration.showName;
         if (ImGui.Checkbox("Leader Name", ref showNameValue))
         {
-            this.Configuration.showName = showNameValue;
+            configuration.showName = showNameValue;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
+            configuration.Save();
         }
 
-        var showObjectiveValue = this.Configuration.showObjective;
+        var showObjectiveValue = configuration.showObjective;
         if (ImGui.Checkbox("Objective", ref showObjectiveValue))
         {
-            this.Configuration.showObjective = showObjectiveValue;
-            this.Configuration.Save();
+            configuration.showObjective = showObjectiveValue;
+            configuration.Save();
         }
 
-        var showDescriptionValue = this.Configuration.showDescription;
+        var showDescriptionValue = configuration.showDescription;
         if (ImGui.Checkbox("Description", ref showDescriptionValue))
         {
-            this.Configuration.showDescription = showDescriptionValue;
-            this.Configuration.Save();
+            configuration.showDescription = showDescriptionValue;
+            configuration.Save();
         }
     }
 }

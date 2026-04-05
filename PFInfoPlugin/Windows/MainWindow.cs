@@ -2,25 +2,24 @@ using System;
 using System.Numerics;
 using Dalamud.Game.Gui.PartyFinder.Types;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace SamplePlugin.Windows;
 
 public class MainWindow : Window, IDisposable
 {
-    private Plugin Plugin;
+    private readonly Plugin plugin;
 
     public MainWindow(Plugin plugin) : base(
         "Party Finder Info", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
-        this.SizeConstraints = new WindowSizeConstraints
+        SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(300, 100),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
 
-        this.Plugin = plugin;
+        this.plugin = plugin;
     }
 
     public void Dispose()
@@ -29,19 +28,19 @@ public class MainWindow : Window, IDisposable
 
     public override void Draw()
     {
-        PartyFinderListing listing = Plugin.pfListing;
+        IPartyFinderListing listing = plugin.pfListing;
 
         if (listing != null)
         {
-            if (Plugin.Configuration.showName)
+            if (plugin.Configuration.showName)
                 ImGui.Text($"Name: {listing.Name}");
 
-            if (Plugin.Configuration.showObjective)
+            if (plugin.Configuration.showObjective)
                 ImGui.Text($"Objective: {listing.Objective}");
 
-            if (Plugin.Configuration.showDescription)
+            if (plugin.Configuration.showDescription)
             {
-                String description = Plugin.pfListing.Description.TextValue;
+                String description = plugin.pfListing.Description.TextValue;
                 ImGui.TextWrapped($"{description}");
 
                 if (ImGui.Button("Copy to Clipboard"))
@@ -58,8 +57,8 @@ public class MainWindow : Window, IDisposable
     
     void CopyToClipboard()
     {
-        PluginLog.LogDebug($"Copying to clipboard: " + Plugin.pfListing.Description.TextValue);
-        ImGui.SetClipboardText(Plugin.pfListing.Description.TextValue);
-        PluginLog.LogDebug($"Copied successfully");
+        //PluginLog.LogDebug($"Copying to clipboard: " + Plugin.pfListing.Description.TextValue);
+        ImGui.SetClipboardText(plugin.pfListing.Description.TextValue);
+        //PluginLog.LogDebug($"Copied successfully");
     }
 }
