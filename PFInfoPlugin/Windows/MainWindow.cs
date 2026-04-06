@@ -1,11 +1,12 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Gui.PartyFinder.Types;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace SamplePlugin.Windows;
+namespace PFInfoPlugin.Windows;
 
 public class MainWindow : Window, IDisposable
 {
@@ -16,7 +17,7 @@ public class MainWindow : Window, IDisposable
     {
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(300, 100),
+            MinimumSize = new Vector2(300, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
 
@@ -48,9 +49,15 @@ public class MainWindow : Window, IDisposable
                 String description = plugin.pfListing.Description.TextValue;
                 ImGui.TextWrapped($"{description}");
 
-                if (ImGui.Button("Copy to Clipboard"))
+                ImGui.PushFont(UiBuilder.IconFont);
+                var copyToClipboard = FontAwesomeIcon.Clipboard.ToIconString();
+                ImGui.NewLine();
+                if (ImGui.Button(copyToClipboard))
+                    CopyDescriptionToClipboard();
+                ImGui.PopFont();
+                if (ImGui.IsItemHovered())
                 {
-                    CopyToClipboard();
+                    ImGui.SetTooltip("Copy Description to Clipboard");
                 }
             }
         }
@@ -60,12 +67,26 @@ public class MainWindow : Window, IDisposable
         }
         ImGui.Text($"---");
         ImGui.Text($"Total Party Finders Joined: {pfListingsJoined.Count}");
+
+        ImGui.PushFont(UiBuilder.IconFont);
+        var configButton = FontAwesomeIcon.Cog.ToIconString();
+        ImGui.NewLine();
+        if (ImGui.Button(configButton))
+            plugin.ConfigWindow.IsOpen = !plugin.ConfigWindow.IsOpen;
+        ImGui.PopFont();
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Configuration");
+        }
     }
 
-    void CopyToClipboard()
+    void CopyDescriptionToClipboard()
     {
-        //PluginLog.LogDebug($"Copying to clipboard: " + Plugin.pfListing.Description.TextValue);
-        ImGui.SetClipboardText(plugin.pfListing.Description.TextValue);
-        //PluginLog.LogDebug($"Copied successfully");
+        if (plugin.pfListing != null)
+        {
+            //PluginLog.LogDebug($"Copying to clipboard: " + Plugin.pfListing.Description.TextValue);
+            ImGui.SetClipboardText(plugin.pfListing.Description.TextValue);
+            //PluginLog.LogDebug($"Copied successfully");
+        }
     }
 }

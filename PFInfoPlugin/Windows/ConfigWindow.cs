@@ -3,7 +3,7 @@ using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 
-namespace SamplePlugin.Windows;
+namespace PFInfoPlugin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {

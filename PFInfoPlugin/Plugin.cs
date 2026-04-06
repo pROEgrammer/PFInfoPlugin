@@ -6,13 +6,15 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using SamplePlugin.Windows;
+using Dalamud.Utility;
+using PFInfoPlugin.Windows;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
-namespace SamplePlugin
+namespace PFInfoPlugin
 {
     public sealed class Plugin : IDalamudPlugin
     {
@@ -29,8 +31,8 @@ namespace SamplePlugin
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("Party Finder Info");
 
-        private ConfigWindow ConfigWindow { get; init; }
-        private MainWindow MainWindow { get; init; }
+        public ConfigWindow ConfigWindow { get; init; }
+        public MainWindow MainWindow { get; init; }
 
         [PluginService]
         internal static IPartyFinderGui PartyFinderGui { get; set; } = null!;
@@ -114,40 +116,39 @@ namespace SamplePlugin
         {
             try
             {
-                PluginLog.Debug($"Chat Type: " + type);
-                PluginLog.Debug($"SysMsg: " + XivChatType.SystemMessage);
+                //PluginLog.Debug($"Chat Type: {type} - SysMyg: {XivChatType.SystemMessage});
 
-                var partyLeaderIndex = PartyList.PartyLeaderIndex;
-                var partyFinderLeader = PartyList[((int)partyLeaderIndex)];
-
-                if (PartyList != null && PartyList.Count > 0)
-                {
-                    PluginLog.Debug($"PartyList: {PartyList.Count}");
-                    PluginLog.Debug($"PartyLeaderIndex: " + partyLeaderIndex);
-                    PluginLog.Debug($"PartyLeader: " + partyFinderLeader);
-                }
+                var partyFinderLeaderName = "";
 
                 if (XivChatType.SystemMessage.Equals(type))
                 {
                     if (this.isDescriptionIncoming)
                     {
                         PluginLog.Debug("PF comment coming up!");
-                        PluginLog.Information($"PF COMMENT: " + message.TextValue);
+                        PluginLog.Debug($"PF COMMENT: " + message.TextValue);
                         pfComment = message.TextValue.ToString();
                     }
                     else
                     {
                         PluginLog.Debug("SystemMessage coming up!");
-                        PluginLog.Information($"SystemMessage COMMENT: " + message.TextValue);
+                        PluginLog.Debug($"SystemMessage COMMENT: " + message.TextValue);
                     }
                     this.isDescriptionIncoming = false;
 
                     if (message.TextValue.Contains("■Comment")) // TODO: Localization?
                         this.isDescriptionIncoming = true;
 
-                    PluginLog.Debug($"pfListingsCount: {this.pfListings.Count}");
+                    if (message.TextValue.Contains("You join "))
+                    {
+                        var regex = new Regex("You join (.* .*)([A-Z][a-z]*)'s party for .*.");
+                        var match = regex.Match(message.TextValue);
+                        if (match.Success) {
+                            partyFinderLeaderName = match.Groups[1].Value;
+                            PluginLog.Debug($"partyFinderLeaderName: {partyFinderLeaderName}");
+                        }
+                    }
 
-                    if (pfComment != null && this.pfListings.Count > 0)
+                    if (!pfComment.IsNullOrEmpty() && this.pfListings.Count > 0)
                     {
                         PluginLog.Debug($"Iterating through listings");
                         var currentKey = pfListings.Keys.Max();
@@ -155,14 +156,16 @@ namespace SamplePlugin
                         {
                             PluginLog.Debug($"Listing name: " + listing.Name + " - " + listing.Description);
 
-                            if (MessageMatchesListing(listing, pfComment)
-                                )
+                            if (MessageMatchesListing(listing, pfComment, partyFinderLeaderName))
                             {
-                                PluginLog.Debug($"DING DING DING\nMatched");
+                                PluginLog.Debug($"DING DING DING - Matched");
+                                PluginLog.Information($"Party Finder Joined: {listing.Name} - {listing.Description}");
 
                                 this.pfListing = listing;
                                 pfListingsJoined.Add(listing);
                                 this.pfListings = new();
+                                partyFinderLeaderName = "";
+                                pfComment = "";
                                 break;
                             }
                             if (this.pfListing != null) break;
@@ -177,13 +180,18 @@ namespace SamplePlugin
         }
 
 
-        private Boolean MessageMatchesListing(IPartyFinderListing listing, string pfComment)
+        private Boolean MessageMatchesListing(IPartyFinderListing listing, string pfComment, string partyFinderLeaderName)
         {
+            PluginLog.Debug($"MessageMatchesListing: {listing.Name} - {pfComment}");
+
             if (pfComment.Equals("None"))
             {
                 return listing.Description.TextValue.Equals("");
             }
-            return listing.Description.TextValue.Equals(pfComment);
+            PluginLog.Debug($"MessageMatchesListing: {listing.Description.TextValue.Equals(pfComment)}");
+            PluginLog.Debug($"MessageMatchesListing: {listing.Name.TextValue.Equals(partyFinderLeaderName)}");
+
+            return listing.Description.TextValue.Equals(pfComment) && listing.Name.TextValue.Equals(partyFinderLeaderName);
         }
 
         public void Dispose()

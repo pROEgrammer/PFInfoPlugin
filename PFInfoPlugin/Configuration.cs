@@ -1,7 +1,7 @@
 using Dalamud.Configuration;
 using System;
 
-namespace SamplePlugin
+namespace PFInfoPlugin
 {
     [Serializable]
     public class Configuration : IPluginConfiguration
