@@ -11,6 +11,8 @@ namespace SamplePlugin
         public bool showName { get; set; } = true;
         public bool showDescription { get; set; } = true;
         public bool showObjective { get; set; } = true;
+        public bool showMinIlvl { get; set; } = true;
+
 
         // the below exist just to make saving less cumbersome
         public void Save()

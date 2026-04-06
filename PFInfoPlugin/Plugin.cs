@@ -44,19 +44,18 @@ namespace SamplePlugin
         internal static IPlayerState playerState { get; set; } = null!;
         public string playerName = "";
 
-        //private List<IPartyFinderListing> pfListings { get; set; } = new();
-
-        public IPartyFinderListing pfListing { get; set; } = null;
+        public IPartyFinderListing pfListing { get; set; } = null!;
+        public List<IPartyFinderListing> pfListingsJoined { get; set; } = new();
 
         private ConcurrentDictionary<int, List<IPartyFinderListing>> pfListings { get; set; } = new();
 
+        public string pfComment = "";
         private Boolean isDescriptionIncoming = false;
-        private Boolean isRecruiting = false;
+        //private Boolean isRecruiting = false;
 
         public Plugin()
         {
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            //this.Configuration.Initialize(this.PluginInterface);
 
             ConfigWindow = new ConfigWindow(this);
             MainWindow = new MainWindow(this);
@@ -79,7 +78,7 @@ namespace SamplePlugin
             // Hook onto PF event
             try
             {
-                //PartyFinderGui.ReceiveListing += this.OnListing;
+                PartyFinderGui.ReceiveListing += this.OnListing;
             }
             catch (Exception ex)
             {
@@ -99,7 +98,6 @@ namespace SamplePlugin
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
 
             //PluginLog.Debug($"PlayerState: {playerState}");
-
             if (playerState.IsLoaded)
             {
                 //PluginLog.Debug($"Loaded PlayerState: {playerState.CharacterName}");
@@ -111,7 +109,7 @@ namespace SamplePlugin
 
         private void OnListing(IPartyFinderListing listing, IPartyFinderListingEventArgs args)
         {
-            PluginLog.Information($"OnListing description: [{args.BatchNumber}] {listing.Name} - {listing.Description}");
+            PluginLog.Debug($"OnListing updating batch: [{args.BatchNumber}] {listing.Name} - {listing.Description}");
 
             if (!this.pfListings.ContainsKey(args.BatchNumber))
             {
@@ -119,7 +117,6 @@ namespace SamplePlugin
             }
 
             this.pfListings[args.BatchNumber].Add(listing);
-            //this.pfListings.Add(listing);
         }
 
         private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
@@ -132,7 +129,6 @@ namespace SamplePlugin
                 var partyLeaderIndex = PartyList.PartyLeaderIndex;
                 var partyFinderLeader = PartyList[((int)partyLeaderIndex)];
 
-
                 if (PartyList != null && PartyList.Count > 0)
                 {
                     PluginLog.Debug($"PartyList: {PartyList.Count}");
@@ -142,12 +138,11 @@ namespace SamplePlugin
 
                 if (XivChatType.SystemMessage.Equals(type))
                 {
-                    var pfComment = "";
                     if (this.isDescriptionIncoming)
                     {
                         PluginLog.Debug("PF comment coming up!");
                         PluginLog.Information($"PF COMMENT: " + message.TextValue);
-                        pfComment = message.TextValue;
+                        pfComment = message.TextValue.ToString();
                     }
                     else
                     {
@@ -159,48 +154,46 @@ namespace SamplePlugin
                     if (message.TextValue.Contains("■Comment")) // TODO: Localization?
                         this.isDescriptionIncoming = true;
 
+                    //if (message.TextValue.Contains("Party recruitment commenced"))
+                    //{
+                    //    this.isRecruiting = true;
+                    //}
 
-                    if (message.TextValue.Contains("Party recruitment commenced"))
-                    {
-                        this.isRecruiting = true;
-                    }
+                    PluginLog.Debug($"pfListingsCount: {this.pfListings.Count}");
 
                     if (pfComment != null && this.pfListings.Count > 0)
                     {
-
-                        PluginLog.Debug("Iterating through listings");
+                        PluginLog.Debug($"Iterating through listings");
                         var currentKey = pfListings.Keys.Max();
                         foreach (var listing in this.pfListings[currentKey])
                         {
                             PluginLog.Debug($"Listing name: " + listing.Name + " - " + listing.Description);
 
-                            if (this.isRecruiting
-                                && listing.Name.ToString().Equals(playerName))
-                            {
-                                PluginLog.Debug("DING DING DING");
-                                PluginLog.Debug("Matched - recruiting");
+                            //if (this.isRecruiting
+                            //    && listing.Name.ToString().Equals(playerName))
+                            //{
+                            //    PluginLog.Debug($"DING DING DING\nMatched - recruiting");
 
-                                this.pfListing = listing;
-                                this.pfListings = new();
-                                break;
-                            }
-                            else
-                            {
-                                //if (message.TextValue.Contains("■Comment")) // TODO: Localization?
-
-                                if (MessageMatchesListing(listing, message) ||
-                                    (partyFinderLeader != null && listing.Name.Equals(partyFinderLeader.Name)))
+                            //    this.pfListing = listing;
+                            //    this.pfListings = new();
+                            //    break;
+                            //}
+                            //else
+                            //{
+                                if (MessageMatchesListing(listing, pfComment)
+                                    //|| (partyFinderLeader != null && listing.Name.Equals(partyFinderLeader.Name))
+                                   )
                                 {
-                                    PluginLog.Debug("DING DING DING");
-                                    PluginLog.Debug("Matched");
+                                    PluginLog.Debug($"DING DING DING\nMatched");
 
                                     this.pfListing = listing;
+                                    pfListingsJoined.Add(listing);
                                     this.pfListings = new();
                                     break;
                                 }
                                 if (this.pfListing != null) break;
-                            }
-                            if (this.pfListing != null) break;
+                            //}
+                            //if (this.pfListing != null) break;
                         }
                     }
                 }
@@ -212,17 +205,16 @@ namespace SamplePlugin
         }
 
 
-        private Boolean MessageMatchesListing(IPartyFinderListing listing, SeString message)
+        private Boolean MessageMatchesListing(IPartyFinderListing listing, string pfComment)
         {
-            //PluginLog.Information($"MessageMatchesListing description: {listing.Description}");
             //PluginLog.Information($"MessageMatchesListing message: {message}");
-            if (message.TextValue.Equals("None"))
+            if (pfComment.Equals("None"))
             {
                 //PluginLog.Information($"MessageMatchesListing message is empty.");
                 return listing.Description.TextValue.Equals("");
             }
-            PluginLog.Information($"MessageMatchesListing does message match description? {listing.Description.TextValue.Equals(message.TextValue)}");
-            return listing.Description.TextValue.Equals(message.TextValue);
+            //PluginLog.Information($"MessageMatchesListing does message match description? {listing.Description.TextValue.Equals(pfComment)}");
+            return listing.Description.TextValue.Equals(pfComment);
         }
 
         public void Dispose()
@@ -240,7 +232,7 @@ namespace SamplePlugin
             CommandManager.RemoveHandler(CommandNamePFInfo);
             CommandManager.RemoveHandler(CommandNamePFInfoConfig);
 
-            //PartyFinderGui.ReceiveListing -= this.OnListing;
+            PartyFinderGui.ReceiveListing -= this.OnListing;
 
             ChatGui.ChatMessage -= OnChatMessage;
         }

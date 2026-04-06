@@ -45,6 +45,13 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
+        var showMinIlvl = configuration.showMinIlvl;
+        if (ImGui.Checkbox("Minimum Item Level", ref showMinIlvl))
+        {
+            configuration.showMinIlvl = showMinIlvl;
+            configuration.Save();
+        }
+
         var showDescriptionValue = configuration.showDescription;
         if (ImGui.Checkbox("Description", ref showDescriptionValue))
         {

@@ -1,8 +1,9 @@
-using System;
-using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Gui.PartyFinder.Types;
 using Dalamud.Interface.Windowing;
-using Dalamud.Bindings.ImGui;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace SamplePlugin.Windows;
 
@@ -29,6 +30,7 @@ public class MainWindow : Window, IDisposable
     public override void Draw()
     {
         IPartyFinderListing listing = plugin.pfListing;
+        List<IPartyFinderListing> pfListingsJoined = plugin.pfListingsJoined;
 
         if (listing != null)
         {
@@ -37,6 +39,9 @@ public class MainWindow : Window, IDisposable
 
             if (plugin.Configuration.showObjective)
                 ImGui.Text($"Objective: {listing.Objective}");
+
+            if (plugin.Configuration.showMinIlvl)
+                ImGui.Text($"Minimum Item Level: {listing.MinimumItemLevel}");
 
             if (plugin.Configuration.showDescription)
             {
@@ -53,8 +58,10 @@ public class MainWindow : Window, IDisposable
         {
             ImGui.TextWrapped("No Party Finder info found - please join a Party Finder first.");
         }
+        ImGui.Text($"---");
+        ImGui.Text($"Total Party Finders Joined: {pfListingsJoined.Count}");
     }
-    
+
     void CopyToClipboard()
     {
         //PluginLog.LogDebug($"Copying to clipboard: " + Plugin.pfListing.Description.TextValue);
