@@ -48,6 +48,8 @@ namespace PFInfoPlugin
         private ConcurrentDictionary<int, List<IPartyFinderListing>> pfListings { get; set; } = new();
 
         public string pfComment = "";
+        public string partyFinderLeaderName = "";
+
         private Boolean isDescriptionIncoming = false;
 
         public Plugin()
@@ -118,8 +120,6 @@ namespace PFInfoPlugin
             {
                 //PluginLog.Debug($"Chat Type: {type} - SysMyg: {XivChatType.SystemMessage});
 
-                var partyFinderLeaderName = "";
-
                 if (XivChatType.SystemMessage.Equals(type))
                 {
                     if (this.isDescriptionIncoming)
@@ -180,18 +180,19 @@ namespace PFInfoPlugin
         }
 
 
-        private Boolean MessageMatchesListing(IPartyFinderListing listing, string pfComment, string partyFinderLeaderName)
+        private Boolean MessageMatchesListing(IPartyFinderListing listing, string pfDescription, string partyFinderHostName)
         {
-            PluginLog.Debug($"MessageMatchesListing: {listing.Name} - {pfComment}");
+            PluginLog.Debug($"MessageMatchesListing: {listing.Description} <-> {pfDescription}");
+            PluginLog.Debug($"MessageMatchesListing: {listing.Name} <-> {partyFinderHostName}");
 
-            if (pfComment.Equals("None"))
+            if (pfDescription.Equals("None"))
             {
-                return listing.Description.TextValue.Equals("");
+                pfDescription = "";
             }
-            PluginLog.Debug($"MessageMatchesListing: {listing.Description.TextValue.Equals(pfComment)}");
-            PluginLog.Debug($"MessageMatchesListing: {listing.Name.TextValue.Equals(partyFinderLeaderName)}");
+            PluginLog.Debug($"MessageMatchesListing description: {listing.Description.TextValue.Equals(pfDescription)}");
+            PluginLog.Debug($"MessageMatchesListing host name: {listing.Name.TextValue.Equals(partyFinderHostName)}");
 
-            return listing.Description.TextValue.Equals(pfComment) && listing.Name.TextValue.Equals(partyFinderLeaderName);
+            return listing.Description.TextValue.Equals(pfDescription) && listing.Name.TextValue.Equals(partyFinderHostName);
         }
 
         public void Dispose()
