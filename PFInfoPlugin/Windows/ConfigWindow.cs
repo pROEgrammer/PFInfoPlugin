@@ -15,7 +15,7 @@ public class ConfigWindow : Window, IDisposable
         
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(200, 100),
+            MinimumSize = new Vector2(300, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
         SizeCondition = ImGuiCond.Always;

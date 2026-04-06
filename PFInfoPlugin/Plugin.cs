@@ -47,7 +47,6 @@ namespace SamplePlugin
 
         public string pfComment = "";
         private Boolean isDescriptionIncoming = false;
-        //private Boolean isRecruiting = false;
 
         public Plugin()
         {
@@ -93,14 +92,10 @@ namespace SamplePlugin
 
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
 
-            //PluginLog.Debug($"PlayerState: {playerState}");
             if (playerState.IsLoaded)
             {
-                //PluginLog.Debug($"Loaded PlayerState: {playerState.CharacterName}");
                 playerName = playerState.CharacterName;
             }
-
-            //PluginLog.Information($"===A cool log message from {PluginInterface.Manifest.Name}===");
         }
 
         private void OnListing(IPartyFinderListing listing, IPartyFinderListingEventArgs args)
@@ -150,11 +145,6 @@ namespace SamplePlugin
                     if (message.TextValue.Contains("■Comment")) // TODO: Localization?
                         this.isDescriptionIncoming = true;
 
-                    //if (message.TextValue.Contains("Party recruitment commenced"))
-                    //{
-                    //    this.isRecruiting = true;
-                    //}
-
                     PluginLog.Debug($"pfListingsCount: {this.pfListings.Count}");
 
                     if (pfComment != null && this.pfListings.Count > 0)
@@ -165,31 +155,17 @@ namespace SamplePlugin
                         {
                             PluginLog.Debug($"Listing name: " + listing.Name + " - " + listing.Description);
 
-                            //if (this.isRecruiting
-                            //    && listing.Name.ToString().Equals(playerName))
-                            //{
-                            //    PluginLog.Debug($"DING DING DING\nMatched - recruiting");
+                            if (MessageMatchesListing(listing, pfComment)
+                                )
+                            {
+                                PluginLog.Debug($"DING DING DING\nMatched");
 
-                            //    this.pfListing = listing;
-                            //    this.pfListings = new();
-                            //    break;
-                            //}
-                            //else
-                            //{
-                                if (MessageMatchesListing(listing, pfComment)
-                                    //|| (partyFinderLeader != null && listing.Name.Equals(partyFinderLeader.Name))
-                                   )
-                                {
-                                    PluginLog.Debug($"DING DING DING\nMatched");
-
-                                    this.pfListing = listing;
-                                    pfListingsJoined.Add(listing);
-                                    this.pfListings = new();
-                                    break;
-                                }
-                                if (this.pfListing != null) break;
-                            //}
-                            //if (this.pfListing != null) break;
+                                this.pfListing = listing;
+                                pfListingsJoined.Add(listing);
+                                this.pfListings = new();
+                                break;
+                            }
+                            if (this.pfListing != null) break;
                         }
                     }
                 }
@@ -203,13 +179,10 @@ namespace SamplePlugin
 
         private Boolean MessageMatchesListing(IPartyFinderListing listing, string pfComment)
         {
-            //PluginLog.Information($"MessageMatchesListing message: {message}");
             if (pfComment.Equals("None"))
             {
-                //PluginLog.Information($"MessageMatchesListing message is empty.");
                 return listing.Description.TextValue.Equals("");
             }
-            //PluginLog.Information($"MessageMatchesListing does message match description? {listing.Description.TextValue.Equals(pfComment)}");
             return listing.Description.TextValue.Equals(pfComment);
         }
 
