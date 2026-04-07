@@ -43,7 +43,8 @@ namespace PFInfoPlugin
         public string playerName = "";
 
         public IPartyFinderListing pfListing { get; set; } = null!;
-        public List<IPartyFinderListing> pfListingsJoined { get; set; } = new();
+        //public List<IPartyFinderListing> pfListingsJoined { get; set; } = new();
+        public ConcurrentDictionary<long, IPartyFinderListing> pfListingsJoined { get; set; } = new();
 
         private ConcurrentDictionary<int, List<IPartyFinderListing>> pfListings { get; set; } = new();
 
@@ -104,13 +105,14 @@ namespace PFInfoPlugin
 
         private void OnListing(IPartyFinderListing listing, IPartyFinderListingEventArgs args)
         {
-            PluginLog.Debug($"OnListing updating batch: [{args.BatchNumber}] {listing.Name} - {listing.Description}");
-
-            if (!this.pfListings.ContainsKey(args.BatchNumber))
+            if (!this.pfListings.ContainsKey(args.BatchNumber) && pfComment.IsNullOrEmpty())
             {
+                PluginLog.Debug($"OnListing clearing for new batch: [{args.BatchNumber}]");
+                this.pfListings.Clear();
                 this.pfListings[args.BatchNumber] = [];
             }
 
+            PluginLog.Debug($"OnListing updating batch: [{args.BatchNumber}] {listing.Name} - {listing.Description}");
             this.pfListings[args.BatchNumber].Add(listing);
         }
 
@@ -118,10 +120,9 @@ namespace PFInfoPlugin
         {
             try
             {
-                //PluginLog.Debug($"Chat Type: {type} - SysMyg: {XivChatType.SystemMessage});
-
                 if (XivChatType.SystemMessage.Equals(type))
                 {
+                    PluginLog.Debug($"Chat Type: {type} - SysMyg: {XivChatType.SystemMessage}");
                     if (this.isDescriptionIncoming)
                     {
                         PluginLog.Debug("PF comment coming up!");
@@ -158,17 +159,16 @@ namespace PFInfoPlugin
 
                             if (MessageMatchesListing(listing, pfComment, partyFinderLeaderName))
                             {
-                                PluginLog.Debug($"DING DING DING - Matched");
                                 PluginLog.Information($"Party Finder Joined: {listing.Name} - {listing.Description}");
 
                                 this.pfListing = listing;
-                                pfListingsJoined.Add(listing);
-                                this.pfListings = new();
+                                pfListingsJoined[DateTime.Now.Ticks] = listing;
+
+                                this.pfListings.Clear();
                                 partyFinderLeaderName = "";
                                 pfComment = "";
                                 break;
                             }
-                            if (this.pfListing != null) break;
                         }
                     }
                 }

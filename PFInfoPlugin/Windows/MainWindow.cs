@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -32,7 +33,7 @@ public class MainWindow : Window, IDisposable
     public override void Draw()
     {
         IPartyFinderListing listing = plugin.pfListing;
-        List<IPartyFinderListing> pfListingsJoined = plugin.pfListingsJoined.OrderByDescending(i => i).ToList();
+        ConcurrentDictionary<long, IPartyFinderListing> pfListingsJoined = plugin.pfListingsJoined;
 
         ImGui.Text($"Total Party Finders Joined: {pfListingsJoined.Count}");
 
@@ -55,31 +56,7 @@ public class MainWindow : Window, IDisposable
                 {
                     if (listing != null)
                     {
-                        if (plugin.Configuration.showName)
-                            ImGui.Text($"Name: {listing.Name}");
-
-                        if (plugin.Configuration.showObjective)
-                            ImGui.Text($"Objective: {listing.Objective}");
-
-                        if (plugin.Configuration.showMinIlvl)
-                            ImGui.Text($"Minimum Item Level: {listing.MinimumItemLevel}");
-
-                        if (plugin.Configuration.showDescription)
-                        {
-                            String description = plugin.pfListing.Description.TextValue;
-                            ImGui.TextWrapped($"{description}");
-
-                            ImGui.PushFont(UiBuilder.IconFont);
-                            var copyToClipboard = FontAwesomeIcon.Clipboard.ToIconString();
-                            ImGui.NewLine();
-                            if (ImGui.Button(copyToClipboard))
-                                CopyDescriptionToClipboard();
-                            ImGui.PopFont();
-                            if (ImGui.IsItemHovered())
-                            {
-                                ImGui.SetTooltip("Copy Description to Clipboard");
-                            }
-                        }
+                        DrawPFListing(listing);
                     }
                     else
                     {
@@ -98,37 +75,7 @@ public class MainWindow : Window, IDisposable
                         ImGui.TextWrapped("No Party Finders joined - please join a Party Finder first.");
                     }
 
-                    foreach (var joinedListing in pfListingsJoined)
-                    {
-                        if (ImGui.CollapsingHeader($"{joinedListing.Name} - {joinedListing.Description}")) {
-                            if (plugin.Configuration.showName)
-                                ImGui.Text($"Name: {joinedListing.Name}");
-
-                            if (plugin.Configuration.showObjective)
-                                ImGui.Text($"Objective: {joinedListing.Objective}");
-
-                            if (plugin.Configuration.showMinIlvl)
-                                ImGui.Text($"Minimum Item Level: {joinedListing.MinimumItemLevel}");
-
-                            if (plugin.Configuration.showDescription)
-                            {
-                                String description = plugin.pfListing.Description.TextValue;
-                                ImGui.TextWrapped($"{description}");
-
-                                ImGui.PushFont(UiBuilder.IconFont);
-                                var copyToClipboard = FontAwesomeIcon.Clipboard.ToIconString();
-                                ImGui.NewLine();
-                                if (ImGui.Button(copyToClipboard))
-                                    CopyDescriptionToClipboard();
-                                ImGui.PopFont();
-                                if (ImGui.IsItemHovered())
-                                {
-                                    ImGui.SetTooltip("Copy Description to Clipboard");
-                                }
-                            }
-                        }
-                    }
-
+                    DrawPFListingHistory(pfListingsJoined);
 
                     ImGui.EndChild();
                 }
@@ -145,6 +92,73 @@ public class MainWindow : Window, IDisposable
             //PluginLog.LogDebug($"Copying to clipboard: " + Plugin.pfListing.Description.TextValue);
             ImGui.SetClipboardText(plugin.pfListing.Description.TextValue);
             //PluginLog.LogDebug($"Copied successfully");
+        }
+    }
+
+    public void DrawPFListing(IPartyFinderListing listing)
+    {
+        if (plugin.Configuration.showName)
+            ImGui.Text($"Name: {listing.Name}");
+
+        if (plugin.Configuration.showObjective)
+            ImGui.Text($"Objective: {listing.Objective}");
+
+        if (plugin.Configuration.showMinIlvl)
+            ImGui.Text($"Minimum Item Level: {listing.MinimumItemLevel}");
+
+        if (plugin.Configuration.showDescription)
+        {
+            String description = plugin.pfListing.Description.TextValue;
+            ImGui.TextWrapped($"{description}");
+
+            ImGui.PushFont(UiBuilder.IconFont);
+            var copyToClipboard = FontAwesomeIcon.Clipboard.ToIconString();
+            ImGui.NewLine();
+            if (ImGui.Button(copyToClipboard))
+                CopyDescriptionToClipboard();
+            ImGui.PopFont();
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("Copy Description to Clipboard");
+            }
+        }
+    }
+
+    public void DrawPFListingHistory(ConcurrentDictionary<long, IPartyFinderListing> pfListingHistory)
+    {
+        foreach (KeyValuePair<long, IPartyFinderListing> pf in pfListingHistory)
+        {
+            IPartyFinderListing joinedListing = pf.Value;
+            DateTime joinedTimestamp = new DateTime(pf.Key);
+
+            if (ImGui.CollapsingHeader($"{joinedTimestamp} - {joinedListing.Name} - {joinedListing.Description}"))
+            {
+                if (plugin.Configuration.showName)
+                    ImGui.Text($"Name: {joinedListing.Name}");
+
+                if (plugin.Configuration.showObjective)
+                    ImGui.Text($"Objective: {joinedListing.Objective}");
+
+                if (plugin.Configuration.showMinIlvl)
+                    ImGui.Text($"Minimum Item Level: {joinedListing.MinimumItemLevel}");
+
+                if (plugin.Configuration.showDescription)
+                {
+                    String description = plugin.pfListing.Description.TextValue;
+                    ImGui.TextWrapped($"{description}");
+
+                    ImGui.PushFont(UiBuilder.IconFont);
+                    var copyToClipboard = FontAwesomeIcon.Clipboard.ToIconString();
+                    ImGui.NewLine();
+                    if (ImGui.Button(copyToClipboard))
+                        CopyDescriptionToClipboard();
+                    ImGui.PopFont();
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip("Copy Description to Clipboard");
+                    }
+                }
+            }
         }
     }
 }
