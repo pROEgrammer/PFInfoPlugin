@@ -43,8 +43,7 @@ namespace PFInfoPlugin
         public string playerName = "";
 
         public IPartyFinderListing pfListing { get; set; } = null!;
-        //public List<IPartyFinderListing> pfListingsJoined { get; set; } = new();
-        public ConcurrentDictionary<long, IPartyFinderListing> pfListingsJoined { get; set; } = new();
+        public OrderedDictionary<long, IPartyFinderListing> pfListingsJoined { get; set; } = new();
 
         private ConcurrentDictionary<int, List<IPartyFinderListing>> pfListings { get; set; } = new();
 
@@ -141,7 +140,7 @@ namespace PFInfoPlugin
 
                     if (message.TextValue.Contains("You join "))
                     {
-                        var regex = new Regex("You join (.* .*)([A-Z][a-z]*)'s party for .*.");
+                        var regex = new Regex("You join (.* .*)([A-Z][a-z]*)'s party for (.*).");
                         var match = regex.Match(message.TextValue);
                         if (match.Success) {
                             partyFinderLeaderName = match.Groups[1].Value;

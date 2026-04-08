@@ -33,7 +33,7 @@ public class MainWindow : Window, IDisposable
     public override void Draw()
     {
         IPartyFinderListing listing = plugin.pfListing;
-        ConcurrentDictionary<long, IPartyFinderListing> pfListingsJoined = plugin.pfListingsJoined;
+        OrderedDictionary<long, IPartyFinderListing> pfListingsJoined = plugin.pfListingsJoined;
 
         ImGui.Text($"Total Party Finders Joined: {pfListingsJoined.Count}");
 
@@ -124,7 +124,7 @@ public class MainWindow : Window, IDisposable
         }
     }
 
-    public void DrawPFListingHistory(ConcurrentDictionary<long, IPartyFinderListing> pfListingHistory)
+    public void DrawPFListingHistory(OrderedDictionary<long, IPartyFinderListing> pfListingHistory)
     {
         foreach (KeyValuePair<long, IPartyFinderListing> pf in pfListingHistory)
         {
